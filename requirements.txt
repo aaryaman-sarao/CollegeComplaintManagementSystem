@@ -1,0 +1,33 @@
+# =============================================================
+# Smart College Complaint Management System
+# Pinned to versions confirmed installed in this environment
+# Install: pip install -r requirements.txt
+# =============================================================
+
+# ── Web framework ─────────────────────────────────────────────
+Flask==3.0.3
+Werkzeug==3.0.3
+itsdangerous==2.2.0
+blinker==1.9.0
+Jinja2==3.1.6
+click==8.4.2
+
+# ── MySQL driver ──────────────────────────────────────────────
+PyMySQL==1.1.1
+
+# ── Environment variables ─────────────────────────────────────
+python-dotenv==1.0.1
+
+# ── NLP pipeline ──────────────────────────────────────────────
+nltk==3.9.1
+scikit-learn==1.9.1
+numpy==2.5.3
+scipy==1.18.0
+joblib==1.5.3
+threadpoolctl==3.6.0
+
+# ── Production WSGI server ────────────────────────────────────
+gunicorn==22.0.0
+
+# ── Utilities ─────────────────────────────────────────────────
+python-dateutil==2.9.0

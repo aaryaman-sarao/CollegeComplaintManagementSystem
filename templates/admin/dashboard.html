@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}📊 Admin Dashboard{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin.complaint_list') }}" class="btn btn-primary btn-sm">📋 All Complaints</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- KPI Cards -->
+<div class="grid-4 mb-2">
+  <div class="card card-accent-blue">
+    <div class="card-title">Total Complaints</div>
+    <div class="card-value">{{ stats.total or 0 }}</div>
+    <div class="card-sub">All time</div>
+  </div>
+  <div class="card card-accent-yellow">
+    <div class="card-title">Pending</div>
+    <div class="card-value">{{ stats.pending or 0 }}</div>
+    <div class="card-sub">Awaiting action</div>
+  </div>
+  <div class="card card-accent-blue">
+    <div class="card-title">In Progress</div>
+    <div class="card-value">{{ stats.in_progress or 0 }}</div>
+    <div class="card-sub">Being handled</div>
+  </div>
+  <div class="card card-accent-green">
+    <div class="card-title">Resolved Today</div>
+    <div class="card-value">{{ stats.resolved_today or 0 }}</div>
+    <div class="card-sub">{{ stats.resolved or 0 }} total resolved</div>
+  </div>
+</div>
+
+<!-- Urgent alert banner -->
+{% if stats.urgent_open and stats.urgent_open > 0 %}
+<div class="alert alert-danger mb-2">
+  <span>🚨 <strong>{{ stats.urgent_open }}</strong> urgent complaint{{ 's' if stats.urgent_open != 1 }} require immediate attention.</span>
+  <a href="{{ url_for('admin.complaint_list', priority='urgent', status='pending') }}"
+     class="btn btn-danger btn-sm" style="margin-left:auto">View Urgent →</a>
+</div>
+{% endif %}
+
+<div class="grid-2">
+
+  <!-- Department breakdown -->
+  <div class="card">
+    <div class="section-header" style="margin-bottom:1rem">
+      <div>
+        <div class="section-title">🏢 Department Load</div>
+        <div class="section-sub">Open complaints per department</div>
+      </div>
+    </div>
+    {% if dept_stats %}
+    <table style="font-size:.85rem">
+      <thead>
+        <tr>
+          <th>Department</th>
+          <th style="text-align:right">Open</th>
+          <th style="text-align:right">Urgent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in dept_stats %}
+        <tr>
+          <td>{{ d.dept_name }}</td>
+          <td style="text-align:right">
+            <span class="badge badge-{{ 'in_progress' if d.open_count else 'closed' }}">
+              {{ d.open_count or 0 }}
+            </span>
+          </td>
+          <td style="text-align:right">
+            {% if d.urgent_count and d.urgent_count > 0 %}
+              <span class="badge badge-urgent">{{ d.urgent_count }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-muted" style="text-align:center;padding:1.5rem">No data yet</div>
+    {% endif %}
+  </div>
+
+  <!-- Urgent queue -->
+  <div class="card">
+    <div class="section-header" style="margin-bottom:1rem">
+      <div>
+        <div class="section-title">🚨 Urgent Queue</div>
+        <div class="section-sub">Oldest unattended urgent tickets</div>
+      </div>
+      <a href="{{ url_for('admin.complaint_list', priority='urgent') }}"
+         class="btn btn-ghost btn-sm">View All</a>
+    </div>
+
+    {% if urgent_queue %}
+      {% for u in urgent_queue %}
+      <a href="{{ url_for('admin.complaint_detail', ticket_id=u.ticket_id) }}"
+         style="display:block;padding:.7rem;border-radius:8px;border:1px solid var(--border);margin-bottom:.6rem;text-decoration:none;transition:background .15s"
+         onmouseover="this.style.background='#fff5f5'"
+         onmouseout="this.style.background='transparent'">
+        <div class="flex items-center justify-between">
+          <span class="ticket-chip" style="font-size:.75rem">{{ u.ticket_id }}</span>
+          <span class="badge badge-urgent">URGENT</span>
+        </div>
+        <div style="font-size:.87rem;color:var(--text-primary);margin-top:.4rem;font-weight:500">
+          {{ u.title|truncate(55) }}
+        </div>
+        <div class="text-muted" style="font-size:.74rem;margin-top:.2rem">
+          {{ u.category }} · {{ u.created_at.strftime('%d %b %Y') }}
+        </div>
+      </a>
+      {% endfor %}
+    {% else %}
+      <div style="text-align:center;padding:2rem">
+        <div style="font-size:2rem">✅</div>
+        <div class="text-muted" style="font-size:.85rem;margin-top:.4rem">No urgent tickets pending</div>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Quick stats row -->
+<div class="grid-3 mt-2">
+  <div class="card card-accent-red" style="text-align:center">
+    <div class="card-title">Urgent Open</div>
+    <div class="card-value" style="color:var(--red)">{{ stats.urgent_open or 0 }}</div>
+  </div>
+  <div class="card card-accent-purple" style="text-align:center">
+    <div class="card-title">Closed</div>
+    <div class="card-value" style="color:var(--purple)">{{ stats.closed or 0 }}</div>
+  </div>
+  <div class="card" style="text-align:center">
+    <div class="card-title">Resolution Rate</div>
+    <div class="card-value text-accent">
+      {% if stats.total and stats.total > 0 %}
+        {{ ((( stats.resolved or 0) + (stats.closed or 0)) / stats.total * 100)|round(1) }}%
+      {% else %}
+        —
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

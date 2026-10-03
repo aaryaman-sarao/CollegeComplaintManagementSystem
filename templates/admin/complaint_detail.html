@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}{{ complaint.ticket_id }} — Admin{% endblock %}
+{% block page_title %}🛠️ Manage Complaint{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin.complaint_list') }}" class="btn btn-ghost btn-sm">← All Complaints</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto">
+
+  <!-- Header -->
+  <div class="card mb-2" style="border-left:3px solid
+    {% if complaint.status == 'resolved' or complaint.status == 'closed' %}var(--green)
+    {% elif complaint.priority == 'urgent' %}var(--red)
+    {% elif complaint.status == 'in_progress' %}var(--accent)
+    {% else %}var(--yellow){% endif %}">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <span class="ticket-chip" style="font-size:.9rem">{{ complaint.ticket_id }}</span>
+      <div class="flex gap-2">
+        <span class="badge badge-{{ complaint.priority }}">{{ complaint.priority|upper }}</span>
+        <span class="badge badge-{{ complaint.status }}">{{ complaint.status.replace('_',' ')|title }}</span>
+      </div>
+    </div>
+    <h2 style="font-size:1.1rem;font-weight:700;margin-top:.8rem">{{ complaint.title }}</h2>
+    <div class="text-muted" style="font-size:.8rem;margin-top:.3rem">
+      Filed by <strong style="color:var(--text-primary)">{{ complaint.student_name }}</strong>
+      ({{ complaint.student_email }}{% if complaint.roll_number %} · {{ complaint.roll_number }}{% endif %})
+      on {{ complaint.created_at.strftime('%d %b %Y, %I:%M %p') }}
+    </div>
+  </div>
+
+  <div class="grid-2" style="align-items:start">
+
+    <!-- Left: complaint info + description -->
+    <div>
+      <div class="card mb-2">
+        <div class="form-label">📝 Description</div>
+        <div style="font-size:.9rem;line-height:1.7;white-space:pre-wrap">{{ complaint.description }}</div>
+        {% if complaint.attachment_path %}
+        <div style="margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--border)">
+          <a href="/uploads/{{ complaint.attachment_path }}" target="_blank"
+             class="btn btn-ghost btn-sm">📎 View Attachment</a>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card mb-2">
+        <div class="form-label" style="margin-bottom:.7rem">📊 Complaint Info</div>
+        <div class="grid-2" style="gap:.75rem;font-size:.87rem">
+          <div><span class="text-muted">NLP Category</span><br><strong>{{ complaint.category or '—' }}</strong></div>
+          <div><span class="text-muted">Department</span><br><strong>{{ complaint.dept_name or 'Unassigned' }}</strong></div>
+          <div><span class="text-muted">Assigned Admin</span><br><strong>{{ complaint.assigned_admin_name or 'Unassigned' }}</strong></div>
+          <div><span class="text-muted">Last Updated</span><br><strong>{{ complaint.updated_at.strftime('%d %b %Y') }}</strong></div>
+        </div>
+      </div>
+
+      <!-- Feedback -->
+      {% if feedback %}
+      <div class="card" style="border-left:3px solid var(--purple)">
+        <div class="form-label">⭐ Student Feedback</div>
+        <div style="margin-top:.5rem">
+          {% for i in range(1,6) %}
+            <span style="color:{% if i <= feedback.rating %}#f39c12{% else %}var(--text-secondary){% endif %};font-size:1.2rem">★</span>
+          {% endfor %}
+          <strong style="margin-left:.4rem">{{ feedback.rating }}/5</strong>
+        </div>
+        {% if feedback.remark %}
+        <div class="text-muted" style="font-size:.84rem;margin-top:.4rem;font-style:italic">"{{ feedback.remark }}"</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: action panels -->
+    <div>
+
+      <!-- Status + Priority Update -->
+      <div class="card mb-2">
+        <div class="form-label" style="margin-bottom:.9rem">🔄 Update Status / Priority</div>
+        <form method="POST"
+              action="{{ url_for('admin.update_complaint', ticket_id=complaint.ticket_id) }}">
+          <div class="form-group">
+            <label class="form-label" for="status">New Status</label>
+            <select id="status" name="status" class="form-control">
+              <option value="">— Keep current ({{ complaint.status.replace('_',' ')|title }}) —</option>
+              {% for s in allowed_next %}
+              <option value="{{ s }}">{{ s.replace('_',' ')|title }}</option>
+              {% endfor %}
+            </select>
+            {% if not allowed_next %}
+            <div class="text-muted" style="font-size:.75rem;margin-top:.3rem">
+              ℹ️ This complaint is in a terminal state.
+            </div>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="priority">Override Priority</label>
+            <select id="priority" name="priority" class="form-control">
+              <option value="">— Keep current ({{ complaint.priority|upper }}) —</option>
+              {% for p in valid_priorities %}
+              <option value="{{ p }}" {% if p == complaint.priority %}selected{% endif %}>
+                {{ p|upper }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm btn-full"
+                  {% if not allowed_next %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}>
+            ✅ Apply Update
+          </button>
+        </form>
+      </div>
+
+      <!-- Department + Admin Assignment -->
+      <div class="card mb-2">
+        <div class="form-label" style="margin-bottom:.9rem">🏢 Assign / Re-route</div>
+        <form method="POST"
+              action="{{ url_for('admin.assign_complaint', ticket_id=complaint.ticket_id) }}">
+          <div class="form-group">
+            <label class="form-label" for="dept_id">Department</label>
+            <select id="dept_id" name="dept_id" class="form-control">
+              <option value="">— Keep current —</option>
+              {% for d in departments %}
+              <option value="{{ d.dept_id }}"
+                      {% if complaint.dept_id == d.dept_id %}selected{% endif %}>
+                {{ d.dept_name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="assigned_to">Assign Admin</label>
+            <select id="assigned_to" name="assigned_to" class="form-control">
+              <option value="">— Unassigned —</option>
+              {% for a in admins %}
+              <option value="{{ a.user_id }}"
+                      {% if complaint.assigned_to == a.user_id %}selected{% endif %}>
+                {{ a.full_name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-warning btn-sm btn-full">
+            🔀 Re-assign
+          </button>
+        </form>
+      </div>
+
+      <!-- Lifecycle guide -->
+      <div class="card" style="font-size:.8rem;color:var(--text-secondary)">
+        <div class="form-label">📌 Lifecycle Guide</div>
+        <div class="timeline" style="margin-top:.6rem">
+          {% for state, label, color in [
+              ('pending',     'Pending — awaiting review',        'var(--yellow)'),
+              ('in_progress', 'In Progress — assigned & active',  'var(--accent)'),
+              ('resolved',    'Resolved — fix verified',          'var(--green)'),
+              ('closed',      'Closed — student rated & done',    'var(--text-secondary)')
+          ] %}
+          <div class="timeline-item">
+            <div class="timeline-text" style="color:
+              {% if complaint.status == state %}{{ color }}{% else %}var(--text-secondary){% endif %};
+              font-weight:{% if complaint.status == state %}700{% else %}400{% endif %}">
+              {{ label }}{% if complaint.status == state %} ←{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

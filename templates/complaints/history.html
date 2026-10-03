@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}My Complaints{% endblock %}
+{% block page_title %}🏠 My Complaints{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('complaints.submit') }}" class="btn btn-primary btn-sm">✏️ New Complaint</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not complaints %}
+  <!-- Empty state -->
+  <div style="text-align:center;padding:4rem 2rem">
+    <div style="font-size:4rem;margin-bottom:1rem">📭</div>
+    <div style="font-size:1.1rem;font-weight:600;color:var(--text-primary)">No complaints filed yet</div>
+    <div class="text-muted" style="margin:.5rem 0 1.5rem">
+      Use the portal to submit and track your grievances digitally.
+    </div>
+    <a href="{{ url_for('complaints.submit') }}" class="btn btn-primary">✏️ File First Complaint</a>
+  </div>
+
+{% else %}
+  <!-- Stats row -->
+  {% set total     = complaints|length %}
+  {% set pending   = complaints|selectattr('status','eq','pending')|list|length %}
+  {% set progress  = complaints|selectattr('status','eq','in_progress')|list|length %}
+  {% set resolved  = complaints|selectattr('status','in',['resolved','closed'])|list|length %}
+
+  <div class="grid-4 mb-2">
+    <div class="card card-accent-blue">
+      <div class="card-title">Total</div>
+      <div class="card-value">{{ total }}</div>
+    </div>
+    <div class="card card-accent-yellow">
+      <div class="card-title">Pending</div>
+      <div class="card-value">{{ pending }}</div>
+    </div>
+    <div class="card card-accent-blue">
+      <div class="card-title">In Progress</div>
+      <div class="card-value">{{ progress }}</div>
+    </div>
+    <div class="card card-accent-green">
+      <div class="card-title">Resolved</div>
+      <div class="card-value">{{ resolved }}</div>
+    </div>
+  </div>
+
+  <!-- Complaint list -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Ticket ID</th>
+          <th>Title</th>
+          <th>Department</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Filed On</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in complaints %}
+        <tr>
+          <td><span class="ticket-chip">{{ c.ticket_id }}</span></td>
+          <td class="truncate" style="max-width:220px" title="{{ c.title }}">{{ c.title }}</td>
+          <td>{{ c.dept_name or c.category or '—' }}</td>
+          <td><span class="badge badge-{{ c.priority }}">{{ c.priority|upper }}</span></td>
+          <td><span class="badge badge-{{ c.status }}">{{ c.status.replace('_',' ')|title }}</span></td>
+          <td style="white-space:nowrap" class="text-muted">
+            {{ c.created_at.strftime('%d %b %Y') }}
+          </td>
+          <td>
+            <a href="{{ url_for('complaints.detail', ticket_id=c.ticket_id) }}"
+               class="btn btn-ghost btn-sm">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="auth-card" style="max-width:480px">
+  <div class="auth-logo">
+    <div class="logo-icon">🎓</div>
+    <h1>Create Account</h1>
+    <p>Register as a student to file complaints</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">
+        <span>{{ msg }}</span>
+        <button class="alert-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('auth.register') }}" novalidate id="reg-form">
+    <div class="form-group">
+      <label class="form-label" for="full_name">Full Name</label>
+      <input
+        type="text"
+        id="full_name"
+        name="full_name"
+        class="form-control"
+        placeholder="Your full name"
+        value="{{ full_name or '' }}"
+        required maxlength="100"
+      />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="email">College Email</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        class="form-control"
+        placeholder="rollno@college.edu"
+        value="{{ email or '' }}"
+        required autocomplete="email"
+      />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="roll_number">Roll Number <span style="color:var(--text-secondary);font-weight:400">(optional)</span></label>
+      <input
+        type="text"
+        id="roll_number"
+        name="roll_number"
+        class="form-control"
+        placeholder="2001XXX"
+        value="{{ roll_number or '' }}"
+        maxlength="30"
+      />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="password">Password</label>
+      <div style="position:relative">
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="form-control"
+          placeholder="Min 8 characters"
+          required minlength="8"
+          autocomplete="new-password"
+          style="padding-right:2.8rem"
+          oninput="checkStrength(this.value)"
+        />
+        <button type="button" onclick="togglePw('password',this)"
+          style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1rem">👁</button>
+      </div>
+      <!-- Password strength bar -->
+      <div style="margin-top:.4rem;height:4px;border-radius:2px;background:var(--border);overflow:hidden">
+        <div id="pw-bar" style="height:100%;width:0;border-radius:2px;transition:width .3s,background .3s"></div>
+      </div>
+      <div id="pw-hint" style="font-size:.72rem;color:var(--text-secondary);margin-top:.25rem"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="confirm_password">Confirm Password</label>
+      <input
+        type="password"
+        id="confirm_password"
+        name="confirm_password"
+        class="form-control"
+        placeholder="Re-enter password"
+        required
+        autocomplete="new-password"
+      />
+      <div id="match-hint" style="font-size:.72rem;margin-top:.25rem"></div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-full" style="margin-top:1.2rem" id="reg-btn">
+      🚀 Create Account
+    </button>
+  </form>
+
+  <p style="text-align:center;margin-top:1.2rem;font-size:.85rem;color:var(--text-secondary)">
+    Already have an account? <a href="{{ url_for('auth.login') }}">Sign in →</a>
+  </p>
+</div>
+
+<script>
+function togglePw(id, btn) {
+  const f = document.getElementById(id);
+  if (f.type === 'password') { f.type = 'text'; btn.textContent = '🙈'; }
+  else { f.type = 'password'; btn.textContent = '👁'; }
+}
+
+function checkStrength(pw) {
+  const bar  = document.getElementById('pw-bar');
+  const hint = document.getElementById('pw-hint');
+  let score = 0;
+  if (pw.length >= 8)  score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const levels = [
+    { w:'0%',   bg:'transparent', label:'' },
+    { w:'25%',  bg:'#e74c3c',     label:'Weak' },
+    { w:'50%',  bg:'#f39c12',     label:'Fair' },
+    { w:'75%',  bg:'#00c6ff',     label:'Good' },
+    { w:'100%', bg:'#2ecc71',     label:'Strong' },
+  ];
+  bar.style.width      = levels[score].w;
+  bar.style.background = levels[score].bg;
+  hint.textContent     = levels[score].label;
+  hint.style.color     = levels[score].bg;
+}
+
+document.getElementById('confirm_password').addEventListener('input', function() {
+  const hint = document.getElementById('match-hint');
+  if (this.value === document.getElementById('password').value) {
+    hint.textContent = '✅ Passwords match';
+    hint.style.color = 'var(--green)';
+  } else {
+    hint.textContent = '❌ Passwords do not match';
+    hint.style.color = 'var(--red)';
+  }
+});
+</script>
+{% endblock %}

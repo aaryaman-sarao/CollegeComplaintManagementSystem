@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="logo-icon">🎓</div>
+    <h1>Smart College CMS</h1>
+    <p>College Complaint Management System</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}">
+        <span>{{ msg }}</span>
+        <button class="alert-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+    <div class="form-group">
+      <label class="form-label" for="email">Email Address</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        class="form-control"
+        placeholder="you@college.edu"
+        value="{{ email or '' }}"
+        required
+        autocomplete="email"
+      />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="password">Password</label>
+      <div style="position:relative">
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="form-control"
+          placeholder="••••••••"
+          required
+          autocomplete="current-password"
+          style="padding-right:2.8rem"
+        />
+        <button type="button" onclick="togglePw('password', this)"
+          style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1rem">
+          👁
+        </button>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-full" style="margin-top:1.4rem">
+      🔐 Sign In
+    </button>
+  </form>
+
+  <p style="text-align:center;margin-top:1.3rem;font-size:.85rem;color:var(--text-secondary)">
+    New student?
+    <a href="{{ url_for('auth.register') }}">Create an account →</a>
+  </p>
+
+
+</div>
+
+<script>
+function togglePw(id, btn) {
+  const f = document.getElementById(id);
+  if (f.type === 'password') { f.type = 'text';     btn.textContent = '🙈'; }
+  else                       { f.type = 'password'; btn.textContent = '👁';  }
+}
+</script>
+{% endblock %}

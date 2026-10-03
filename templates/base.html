@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Smart CMS{% endblock %} — College Complaint System</title>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  <!-- Chart.js (used by analytics page) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{# ── Sidebar ────────────────────────────────────────────────── #}
+{% if session.user_id %}
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-title">🎓 Smart CMS</div>
+    <div class="brand-sub">College Complaint Portal</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    {% if session.role == 'admin' %}
+      <div class="nav-section-label">Admin</div>
+      <a href="{{ url_for('admin.dashboard') }}"
+         class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a href="{{ url_for('admin.complaint_list') }}"
+         class="nav-link {% if request.endpoint in ['admin.complaint_list','admin.complaint_detail'] %}active{% endif %}">
+        <span class="nav-icon">📋</span> All Complaints
+      </a>
+      <a href="{{ url_for('admin.analytics') }}"
+         class="nav-link {% if request.endpoint == 'admin.analytics' %}active{% endif %}">
+        <span class="nav-icon">📈</span> Analytics
+      </a>
+
+      <div class="nav-section-label" style="margin-top:.5rem">Management</div>
+      <a href="{{ url_for('admin.user_list') }}"
+         class="nav-link {% if request.endpoint == 'admin.user_list' %}active{% endif %}">
+        <span class="nav-icon">👥</span> Users
+      </a>
+
+    {% else %}
+      <div class="nav-section-label">Student</div>
+      <a href="{{ url_for('complaints.history') }}"
+         class="nav-link {% if request.endpoint == 'complaints.history' %}active{% endif %}">
+        <span class="nav-icon">🏠</span> My Complaints
+      </a>
+      <a href="{{ url_for('complaints.submit') }}"
+         class="nav-link {% if request.endpoint == 'complaints.submit' %}active{% endif %}">
+        <span class="nav-icon">✏️</span> New Complaint
+      </a>
+      <a href="{{ url_for('complaints.track') }}"
+         class="nav-link {% if request.endpoint == 'complaints.track' %}active{% endif %}">
+        <span class="nav-icon">🔍</span> Track Ticket
+      </a>
+    {% endif %}
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-name">{{ session.full_name }}</div>
+    <div style="margin-top:.2rem">{{ session.role|capitalize }}</div>
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm" style="margin-top:.7rem;width:100%;justify-content:center">
+      🚪 Logout
+    </a>
+  </div>
+</aside>
+{% endif %}
+
+{# ── Main wrapper ───────────────────────────────────────────── #}
+<div class="main-wrapper {% if not session.user_id %}auth-page{% endif %}">
+
+  {% if session.user_id %}
+  <header class="topbar">
+    <span class="topbar-title">{% block page_title %}{% endblock %}</span>
+    <div class="topbar-actions">
+      {% block topbar_actions %}{% endblock %}
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="{% if session.user_id %}content-area{% endif %}">
+
+    {# ── Flash messages ─────────────────────────────────────── #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div id="flash-container">
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }}" role="alert">
+              <span>
+                {% if cat == 'success' %}✅{% elif cat == 'danger' %}❌{% elif cat == 'warning' %}⚠️{% else %}ℹ️{% endif %}
+                {{ msg }}
+              </span>
+              <button class="alert-close" onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

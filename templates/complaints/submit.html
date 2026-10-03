@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}New Complaint{% endblock %}
+{% block page_title %}✏️ File a New Complaint{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('complaints.history') }}" class="btn btn-ghost btn-sm">← My Complaints</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:760px;margin:0 auto">
+
+  <!-- Info banner -->
+  <div class="card" style="margin-bottom:1.6rem;border-left:3px solid var(--accent)">
+    <div class="flex items-center gap-2">
+      <span style="font-size:1.4rem">🤖</span>
+      <div>
+        <div style="font-weight:600;color:var(--accent)">AI-Powered Triage</div>
+        <div class="text-muted" style="font-size:.82rem;margin-top:.15rem">
+          Our NLP engine will automatically categorise your complaint and set its priority as you type.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('complaints.submit') }}"
+        enctype="multipart/form-data" novalidate id="complaint-form">
+
+    <!-- Title -->
+    <div class="card mb-2">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" for="title">Complaint Title <span style="color:var(--red)">*</span></label>
+        <input type="text" id="title" name="title" class="form-control"
+               placeholder="e.g. Water leakage in hostel room 204"
+               value="{{ title or '' }}" required maxlength="255" />
+        <div class="text-muted" style="font-size:.74rem;margin-top:.3rem">
+          Keep it short and descriptive (max 255 characters)
+        </div>
+      </div>
+    </div>
+
+    <!-- Description + live NLP preview -->
+    <div class="card mb-2">
+      <label class="form-label" for="description">
+        Detailed Description <span style="color:var(--red)">*</span>
+      </label>
+      <textarea id="description" name="description" class="form-control"
+                placeholder="Describe your complaint in detail — location, duration, severity, what you have tried so far…"
+                required minlength="20" rows="6">{{ description or '' }}</textarea>
+      <div style="margin-top:.75rem">
+        <div class="nlp-label">🤖 AI Auto-Detection</div>
+        <div class="nlp-preview" id="nlp-preview">
+          <span class="nlp-pill nlp-pill-cat"  id="nlp-cat">—</span>
+          <span class="nlp-pill nlp-pill-priority" id="nlp-pri">—</span>
+          <span class="text-muted" id="nlp-status" style="font-size:.75rem">Start typing to see prediction…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category override + attachment -->
+    <div class="grid-2 mb-2">
+      <div class="card">
+        <label class="form-label" for="category">Department Override</label>
+        <select id="category" name="category" class="form-control">
+          <option value="auto">🤖 Auto-Detect (Recommended)</option>
+          <option value="Hostel">🏠 Hostel</option>
+          <option value="Electrical">⚡ Electrical</option>
+          <option value="Academic">📚 Academic</option>
+          <option value="Maintenance">🔧 Maintenance</option>
+          <option value="IT Support">💻 IT Support</option>
+          <option value="Transport">🚌 Transport</option>
+        </select>
+        <div class="text-muted" style="font-size:.74rem;margin-top:.3rem">
+          Override only if you know the exact department.
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="form-label" for="attachment">Attachment <span style="color:var(--text-secondary);font-weight:400">(optional)</span></label>
+        <input type="file" id="attachment" name="attachment" class="form-control"
+               accept=".pdf,.png,.jpg,.jpeg,.gif,.docx" />
+        <div class="text-muted" style="font-size:.74rem;margin-top:.3rem">
+          PDF, images, or DOCX · Max 5 MB
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="flex items-center gap-2" style="margin-top:1rem">
+      <button type="submit" class="btn btn-primary" id="submit-btn">
+        🚀 Submit Complaint
+      </button>
+      <a href="{{ url_for('complaints.history') }}" class="btn btn-ghost">Cancel</a>
+      <span class="text-muted" style="font-size:.78rem;margin-left:auto">
+        You will receive a unique Ticket ID on submission.
+      </span>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const descEl   = document.getElementById('description');
+  const catEl    = document.getElementById('nlp-cat');
+  const priEl    = document.getElementById('nlp-pri');
+  const statusEl = document.getElementById('nlp-status');
+  let   debounce;
+
+  function setPriStyle(pri, el) {
+    el.className = 'nlp-pill';
+    if (pri === 'urgent') el.classList.add('nlp-pill-urgent');
+    else                  el.classList.add('nlp-pill-priority');
+  }
+
+  async function fetchPreview(text) {
+    statusEl.textContent = '⏳ Analysing…';
+    try {
+      const res  = await fetch('{{ url_for("complaints.preview_triage") }}', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ description: text }),
+      });
+      const data = await res.json();
+      if (data.category && data.category !== '—') {
+        catEl.textContent = '📂 ' + data.category;
+        priEl.textContent = '🔔 ' + data.priority.toUpperCase();
+        setPriStyle(data.priority, priEl);
+        statusEl.textContent = '✅ AI prediction ready';
+      } else {
+        catEl.textContent = '—';
+        priEl.textContent = '—';
+        statusEl.textContent = 'Type at least 10 characters…';
+      }
+    } catch {
+      statusEl.textContent = '⚠️ Preview unavailable';
+    }
+  }
+
+  descEl.addEventListener('input', function () {
+    clearTimeout(debounce);
+    if (this.value.length < 10) {
+      catEl.textContent    = '—';
+      priEl.textContent    = '—';
+      statusEl.textContent = 'Start typing to see prediction…';
+      return;
+    }
+    debounce = setTimeout(() => fetchPreview(this.value), 600);
+  });
+
+  // Trigger if page loaded with pre-filled text (e.g. validation error)
+  if (descEl.value.length >= 10) fetchPreview(descEl.value);
+})();
+</script>
+{% endblock %}

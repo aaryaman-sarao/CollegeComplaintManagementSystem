@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}{{ complaint.ticket_id }}{% endblock %}
+{% block page_title %}📄 Complaint Detail{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('complaints.history') }}" class="btn btn-ghost btn-sm">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto">
+
+  <!-- Header card -->
+  <div class="card mb-2" style="border-left:3px solid
+    {% if complaint.status == 'resolved' or complaint.status == 'closed' %}var(--green)
+    {% elif complaint.status == 'in_progress' %}var(--accent)
+    {% elif complaint.priority == 'urgent' %}var(--red)
+    {% else %}var(--yellow){% endif %}">
+
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <span class="ticket-chip" style="font-size:.9rem">{{ complaint.ticket_id }}</span>
+      <div class="flex gap-2">
+        <span class="badge badge-{{ complaint.priority }}">{{ complaint.priority|upper }}</span>
+        <span class="badge badge-{{ complaint.status }}">{{ complaint.status.replace('_',' ')|title }}</span>
+      </div>
+    </div>
+
+    <h2 style="font-size:1.15rem;font-weight:700;margin-top:.8rem;margin-bottom:.4rem">
+      {{ complaint.title }}
+    </h2>
+    <div class="text-muted" style="font-size:.8rem">
+      Filed on {{ complaint.created_at.strftime('%d %B %Y at %I:%M %p') }}
+      · Last updated {{ complaint.updated_at.strftime('%d %B %Y') }}
+    </div>
+  </div>
+
+  <!-- Description -->
+  <div class="card mb-2">
+    <div class="form-label">📝 Description</div>
+    <div style="font-size:.93rem;line-height:1.7;white-space:pre-wrap;color:var(--text-primary)">{{ complaint.description }}</div>
+
+    {% if complaint.attachment_path %}
+    <div style="margin-top:1rem;padding-top:.9rem;border-top:1px solid var(--border)">
+      <div class="form-label">📎 Attachment</div>
+      <a href="{{ url_for('static', filename='') }}../uploads/{{ complaint.attachment_path }}"
+         target="_blank" class="btn btn-ghost btn-sm">
+        📎 View Attachment
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Routing info -->
+  <div class="grid-2 mb-2">
+    <div class="card">
+      <div class="form-label">🏢 Routed Department</div>
+      <div style="font-size:1rem;font-weight:600">{{ complaint.dept_name or complaint.category or 'Not assigned yet' }}</div>
+      {% if complaint.assigned_admin_name %}
+      <div class="text-muted" style="font-size:.82rem;margin-top:.3rem">👤 {{ complaint.assigned_admin_name }}</div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <div class="form-label">🤖 NLP Category</div>
+      <div style="font-size:1rem;font-weight:600">{{ complaint.category or '—' }}</div>
+      <div class="text-muted" style="font-size:.82rem;margin-top:.3rem">Auto-classified by NLP engine</div>
+    </div>
+  </div>
+
+  <!-- Lifecycle timeline -->
+  <div class="card mb-2">
+    <div class="form-label" style="margin-bottom:.9rem">📅 Status Timeline</div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-meta">Submitted</div>
+        <div class="timeline-text">{{ complaint.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+      </div>
+      {% if complaint.status in ('in_progress','resolved','closed') %}
+      <div class="timeline-item">
+        <div class="timeline-meta">In Progress</div>
+        <div class="timeline-text" style="color:var(--accent)">Being handled by {{ complaint.dept_name or 'department' }}</div>
+      </div>
+      {% endif %}
+      {% if complaint.status in ('resolved','closed') and complaint.resolved_at %}
+      <div class="timeline-item">
+        <div class="timeline-meta">Resolved</div>
+        <div class="timeline-text" style="color:var(--green)">{{ complaint.resolved_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+      </div>
+      {% endif %}
+      {% if complaint.status == 'closed' and complaint.closed_at %}
+      <div class="timeline-item">
+        <div class="timeline-meta">Closed</div>
+        <div class="timeline-text" style="color:var(--text-secondary)">{{ complaint.closed_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Feedback section -->
+  {% if complaint.status in ('resolved','closed') %}
+  <div class="card" style="border-left:3px solid var(--purple)">
+    <div class="form-label" style="margin-bottom:.8rem">⭐ Rate This Resolution</div>
+
+    {% if feedback %}
+      <!-- Already rated -->
+      <div style="font-size:.9rem;color:var(--text-primary);margin-bottom:.4rem">
+        Your rating:
+        {% for i in range(1,6) %}
+          <span style="color:{% if i <= feedback.rating %}#f39c12{% else %}var(--text-secondary){% endif %}">★</span>
+        {% endfor %}
+        <strong>({{ feedback.rating }}/5)</strong>
+      </div>
+      {% if feedback.remark %}
+      <div class="text-muted" style="font-size:.85rem">"{{ feedback.remark }}"</div>
+      {% endif %}
+      <div class="text-muted" style="font-size:.75rem;margin-top:.4rem">
+        Submitted on {{ feedback.submitted_at.strftime('%d %b %Y') }}
+      </div>
+    {% else %}
+      <!-- Rating form -->
+      <form method="POST"
+            action="{{ url_for('complaints.submit_feedback', ticket_id=complaint.ticket_id) }}">
+        <div class="form-group">
+          <label class="form-label">How satisfied are you with the resolution?</label>
+          <div class="star-group">
+            {% for i in [5,4,3,2,1] %}
+            <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" {% if i==5 %}required{% endif %}>
+            <label for="star{{ i }}" title="{{ i }} star{{ 's' if i > 1 }}">★</label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="remark">Comments <span class="text-muted font-normal">(optional)</span></label>
+          <textarea id="remark" name="remark" class="form-control" rows="2"
+                    placeholder="Tell us how the issue was resolved…" maxlength="500"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">⭐ Submit Rating</button>
+      </form>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="card" style="text-align:center;padding:1.5rem">
+    <div style="font-size:2rem">⏳</div>
+    <div class="text-muted" style="font-size:.85rem;margin-top:.4rem">
+      Rating becomes available once the complaint is resolved.
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

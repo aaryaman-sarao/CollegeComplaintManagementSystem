@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Track Ticket{% endblock %}
+{% block page_title %}🔍 Track Complaint{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;margin:0 auto">
+
+  <!-- Search form -->
+  <div class="card mb-2">
+    <div style="font-weight:600;margin-bottom:1rem;font-size:1rem">Enter your Ticket ID</div>
+    <form method="POST" action="{{ url_for('complaints.track') }}" class="flex gap-2 flex-wrap">
+      <input type="text" name="ticket_id" class="form-control font-mono"
+             placeholder="CMP-20261003-3F8A12"
+             value="{{ request.form.get('ticket_id','') }}"
+             style="flex:1;min-width:220px;text-transform:uppercase"
+             required maxlength="25" />
+      <button type="submit" class="btn btn-primary">🔍 Track</button>
+    </form>
+    <div class="text-muted" style="font-size:.78rem;margin-top:.5rem">
+      Ticket IDs were sent to you at submission. Format: CMP-YYYYMMDD-XXXXXX
+    </div>
+  </div>
+
+  <!-- Result -->
+  {% if complaint %}
+  <div class="card" style="border-left:3px solid
+    {% if complaint.status == 'resolved' or complaint.status == 'closed' %}var(--green)
+    {% elif complaint.status == 'in_progress' %}var(--accent)
+    {% else %}var(--yellow){% endif %}">
+
+    <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+      <span class="ticket-chip">{{ complaint.ticket_id }}</span>
+      <span class="badge badge-{{ complaint.status }}">{{ complaint.status.replace('_',' ')|title }}</span>
+    </div>
+
+    <div style="font-size:1.05rem;font-weight:600;margin-bottom:1rem">{{ complaint.title }}</div>
+
+    <!-- Status timeline -->
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-meta">Submitted</div>
+        <div class="timeline-text">{{ complaint.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+      </div>
+      {% if complaint.dept_name %}
+      <div class="timeline-item">
+        <div class="timeline-meta">Routed to Department</div>
+        <div class="timeline-text">{{ complaint.dept_name }}{% if complaint.assigned_admin %} · Assigned to {{ complaint.assigned_admin }}{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if complaint.status in ('resolved','closed') %}
+      <div class="timeline-item">
+        <div class="timeline-meta">Status</div>
+        <div class="timeline-text" style="color:var(--green)">✅ {{ complaint.status|title }} · Last updated {{ complaint.updated_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="grid-2" style="margin-top:1.2rem">
+      <div>
+        <div class="form-label">Category</div>
+        <div>{{ complaint.category or '—' }}</div>
+      </div>
+      <div>
+        <div class="form-label">Priority</div>
+        <span class="badge badge-{{ complaint.priority }}">{{ complaint.priority|upper }}</span>
+      </div>
+    </div>
+
+    <div class="flex gap-2" style="margin-top:1.2rem">
+      <a href="{{ url_for('complaints.detail', ticket_id=complaint.ticket_id) }}"
+         class="btn btn-ghost btn-sm">View Full Details →</a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

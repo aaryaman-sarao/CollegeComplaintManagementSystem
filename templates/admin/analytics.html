@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block page_title %}📈 Resolution Analytics{% endblock %}
+
+{% block topbar_actions %}
+  <button onclick="window.print()" class="btn btn-ghost btn-sm">🖨️ Print Report</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- Overall KPIs -->
+<div class="grid-3 mb-2">
+  <div class="card card-accent-blue" style="text-align:center">
+    <div class="card-title">Total Complaints</div>
+    <div class="card-value">{{ overall.total or 0 }}</div>
+  </div>
+  <div class="card card-accent-green" style="text-align:center">
+    <div class="card-title">Resolution Rate</div>
+    <div class="card-value text-accent">
+      {% if overall.total and overall.total > 0 %}
+        {{ ((overall.resolved_total or 0) / overall.total * 100)|round(1) }}%
+      {% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="card card-accent-yellow" style="text-align:center">
+    <div class="card-title">Avg. Resolution Time</div>
+    <div class="card-value">
+      {% if overall.avg_resolution_hrs %}
+        {{ overall.avg_resolution_hrs }}h
+      {% else %}—{% endif %}
+    </div>
+    <div class="card-sub">Hours from submit → resolve</div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="grid-2 mb-2">
+
+  <!-- Status doughnut -->
+  <div class="card">
+    <div class="section-title" style="margin-bottom:1rem">📊 Status Distribution</div>
+    <div class="chart-box">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Priority bar -->
+  <div class="card">
+    <div class="section-title" style="margin-bottom:1rem">🔔 Priority Breakdown</div>
+    <div class="chart-box">
+      <canvas id="priorityChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Monthly volume line chart -->
+<div class="card mb-2">
+  <div class="section-title" style="margin-bottom:1rem">📅 Monthly Complaint Volume (Last 6 Months)</div>
+  <div class="chart-box">
+    <canvas id="monthlyChart" style="max-height:200px"></canvas>
+  </div>
+</div>
+
+<!-- Department table -->
+<div class="card">
+  <div class="section-header">
+    <div>
+      <div class="section-title">🏢 Department Performance</div>
+      <div class="section-sub">Resolution rates and average turnaround per department</div>
+    </div>
+  </div>
+  <div class="table-wrap" style="border:none">
+    <table>
+      <thead>
+        <tr>
+          <th>Department</th>
+          <th style="text-align:right">Total</th>
+          <th style="text-align:right">Resolved</th>
+          <th style="text-align:right">Resolution Rate</th>
+          <th style="text-align:right">Avg. Time (hrs)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in dept_analytics %}
+        <tr>
+          <td><strong>{{ d.dept_name }}</strong></td>
+          <td style="text-align:right">{{ d.total or 0 }}</td>
+          <td style="text-align:right">{{ d.resolved or 0 }}</td>
+          <td style="text-align:right">
+            {% if d.total and d.total > 0 %}
+              {% set rate = ((d.resolved or 0) / d.total * 100)|round(1) %}
+              <span class="badge badge-{% if rate >= 75 %}resolved{% elif rate >= 40 %}in_progress{% else %}pending{% endif %}">
+                {{ rate }}%
+              </span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right">{{ d.avg_hrs or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Fetch JSON data from API endpoint and render charts
+fetch('{{ url_for("admin.analytics_data") }}')
+  .then(r => r.json())
+  .then(data => {
+    const navy   = '#f8f9fa';
+    const accent = '#cc0000';
+
+    // Shared chart defaults
+    Chart.defaults.color           = '#495057';
+    Chart.defaults.borderColor     = '#e9ecef';
+    Chart.defaults.font.family     = "'Segoe UI', system-ui, sans-serif";
+    Chart.defaults.font.size       = 12;
+
+    /* ── Status doughnut ────────────────────────────────── */
+    new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Pending', 'In Progress', 'Resolved', 'Closed'],
+        datasets: [{
+          data: [
+            data.status_counts.pending    || 0,
+            data.status_counts.in_progress|| 0,
+            data.status_counts.resolved   || 0,
+            data.status_counts.closed     || 0,
+          ],
+          backgroundColor: ['#f39c12','#0057b8','#1a7a40','#adb5bd'],
+          borderColor:      navy,
+          borderWidth:      3,
+          hoverOffset:      8,
+        }],
+      },
+      options: {
+        cutout: '68%',
+        plugins: {
+          legend: { position: 'right', labels: { padding:16, boxWidth:12 } },
+        },
+      },
+    });
+
+    /* ── Priority bar ──────────────────────────────────── */
+    new Chart(document.getElementById('priorityChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Low', 'Medium', 'High', 'Urgent'],
+        datasets: [{
+          label: 'Complaints',
+          data: [
+            data.priority_counts.low    || 0,
+            data.priority_counts.medium || 0,
+            data.priority_counts.high   || 0,
+            data.priority_counts.urgent || 0,
+          ],
+          backgroundColor: [
+            'rgba(173,181,189,0.3)',
+            'rgba(0,87,184,0.35)',
+            'rgba(243,156,18,0.45)',
+            'rgba(204,0,0,0.45)',
+          ],
+          borderColor: ['#adb5bd','#0057b8','#a65f00','#cc0000'],
+          borderWidth: 1,
+          borderRadius: 6,
+        }],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+
+    /* ── Monthly volume line ───────────────────────────── */
+    const months = data.monthly_volume.map(m => m.month);
+    const counts = data.monthly_volume.map(m => m.cnt);
+    new Chart(document.getElementById('monthlyChart'), {
+      type: 'line',
+      data: {
+        labels: months.length ? months : ['No data'],
+        datasets: [{
+          label: 'Complaints',
+          data:  counts.length ? counts : [0],
+          borderColor:     accent,
+          backgroundColor: 'rgba(204,0,0,0.08)',
+          pointBackgroundColor: accent,
+          pointRadius: 5,
+          tension: 0.4,
+          fill: true,
+        }],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  })
+  .catch(err => console.error('Analytics data error:', err));
+</script>
+{% endblock %}

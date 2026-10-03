@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}👥 Student Accounts{% endblock %}
+
+{% block topbar_actions %}
+  <span class="text-muted" style="font-size:.82rem">{{ users|length }} student{{ 's' if users|length != 1 }}</span>
+{% endblock %}
+
+{% block content %}
+
+<!-- Summary cards -->
+<div class="grid-3 mb-2">
+  <div class="card card-accent-blue">
+    <div class="card-title">Total Students</div>
+    <div class="card-value">{{ users|length }}</div>
+  </div>
+  <div class="card card-accent-green">
+    <div class="card-title">Active</div>
+    <div class="card-value">{{ users|selectattr('is_active','eq',1)|list|length }}</div>
+  </div>
+  <div class="card card-accent-red">
+    <div class="card-title">Deactivated</div>
+    <div class="card-value" style="color:var(--red)">{{ users|selectattr('is_active','eq',0)|list|length }}</div>
+  </div>
+</div>
+
+{% if users %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Roll No.</th>
+        <th style="text-align:right">Complaints</th>
+        <th>Registered</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr style="opacity:{% if not u.is_active %}0.55{% else %}1{% endif %}">
+        <td>
+          <div style="font-weight:600">{{ u.full_name }}</div>
+        </td>
+        <td class="text-muted">{{ u.email }}</td>
+        <td class="font-mono text-muted">{{ u.roll_number or '—' }}</td>
+        <td style="text-align:right">
+          <span class="badge badge-{{ 'in_progress' if u.complaint_count > 0 else 'closed' }}">
+            {{ u.complaint_count }}
+          </span>
+        </td>
+        <td class="text-muted">{{ u.created_at.strftime('%d %b %Y') }}</td>
+        <td>
+          {% if u.is_active %}
+            <span class="badge badge-resolved">Active</span>
+          {% else %}
+            <span class="badge badge-closed">Deactivated</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="POST"
+                action="{{ url_for('admin.toggle_user', user_id=u.user_id) }}"
+                onsubmit="return confirm('{% if u.is_active %}Deactivate this student account?{% else %}Reactivate this student account?{% endif %}')">
+            <button type="submit"
+                    class="btn btn-sm {% if u.is_active %}btn-danger{% else %}btn-success{% endif %}">
+              {% if u.is_active %}🚫 Deactivate{% else %}✅ Activate{% endif %}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div style="text-align:center;padding:3.5rem 1rem">
+  <div style="font-size:3rem;margin-bottom:.8rem">👤</div>
+  <div style="font-weight:600;font-size:1rem">No student accounts yet</div>
+  <div class="text-muted" style="font-size:.84rem;margin-top:.4rem">
+    Students will appear here once they register on the portal.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

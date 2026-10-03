@@ -1,0 +1,37 @@
+# Secrets — never commit
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Uploads (user files)
+uploads/
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Byte-compiled / optimized
+*.pyc
+
+# Trained NLP model (binary artifact — run nlp_trainer.py to regenerate)
+models/triage_model.pkl
+
+# pytest / coverage
+.pytest_cache/
+htmlcov/
+.coverage
